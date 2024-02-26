@@ -1,0 +1,5 @@
+Welcome to the filter program!
+Written by: Abdulaziz Alajlan
+dump all CSV files in the same folder as the program.py file in order for code to run properly
+Sometimes entering product name gives incorrect output. if entering the full name of the product doesn't work enter a uniqe snippet of the product name
+The link file is used to get the meta gene details from the JGI website so that a fasta file can be created
