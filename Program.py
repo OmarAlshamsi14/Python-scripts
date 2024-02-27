@@ -51,11 +51,14 @@ def linkgen():
         for line in lines:
             line = line.strip().split()
             link = "https://img.jgi.doe.gov/cgi-bin/mer/main.cgi?section=MetaGeneDetail&page=genePageMainFaa&taxon_oid=" + line[0] + "&data_type=assembled&gene_oid=" + line[2].split(",")[0]
-            if line[10] == "alcohol":
+            try:
+                if type(int(line[9])) != int:
+                    continue
+                else:
+                    mlist = [line[9], link]
+                csv_writer.writerow(mlist)
+            except:
                 continue
-            else:
-                mlist = [line[10], link]
-            csv_writer.writerow(mlist)
     log_text.insert(tk.END, "Done generating links.\n")
     root.update_idletasks()
 
