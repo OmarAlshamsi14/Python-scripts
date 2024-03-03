@@ -37,7 +37,7 @@ def linkgen():
                 if type(int(line[9])) != int:
                     continue
                 else:
-                    mlist = [line[9], link] #Change line[NUMBER] to whatever number gets you the needed data
+                    mlist = [line[9], link]
                 csv_writer.writerow(mlist)
             except:
                 continue
