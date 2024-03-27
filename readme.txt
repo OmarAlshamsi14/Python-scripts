@@ -14,7 +14,7 @@ csv
 
 Functions:
 
-renamer() [No parameters]:
+namer() [No parameters]:
 Renaming files from 1 to the number of files available.
 
 filter_and_append_to_csv(Input_file, output_file, product):
