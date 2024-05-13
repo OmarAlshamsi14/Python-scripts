@@ -5,10 +5,16 @@ Sometimes entering product name gives incorrect output. if entering the full nam
 The link file is used to get the meta gene details from the JGI website so that a fasta file can be created
 For the Links output file the result might be different depending on your product. Use the Link_Gen.py file to find out which part of the line variable is the gene length so you can get the correct link files
 
+*/ Updates!!
+New features added: 
+Now you can search for multiple products at the same time using commas.
+Now you can selec whether or not you want the CSV files deleted.
+// current bugs:
+Can't use delete csv files feature while also entering multiple products for search.
+/*
+
 Libraries used:
 tkinter
-from tkinter, simpledialog
-from tkinter, messagebox
 os
 csv
 
