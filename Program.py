@@ -10,7 +10,7 @@ def namer(): #Gives every rnaseq data file a number to later start filtering.
     root.update_idletasks()
 
     # Get a list of all CSV files in the folder
-    csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
+    csv_files = [file for file in os.listdir(folder_path) if file.startswith('rnaseq_data')]
 
     # Rename each file with a numbered format
     for index, file in enumerate(csv_files, start=1):
@@ -64,7 +64,7 @@ def linkgen():
 
 def delete_csv_files():
     folder_path = os.path.dirname(os.path.realpath(__file__))
-    csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv') and file != "output_file.csv" and file != "link_generator.csv"]
+    csv_files = [file for file in os.listdir(folder_path) if 'rnaseq_data' in file]
     for file in csv_files:
         os.remove(os.path.join(folder_path, file))
     log_text.insert(tk.END, "CSV files have been deleted.\n")
@@ -80,11 +80,11 @@ def renamer(product): #Updates names (For now doesn't change anything)
     for index, file in enumerate(csv_files, start=1):
         old_path = os.path.join(folder_path, file)
         if file == "output_file.csv":
-            new_name = "output_file.csv" #Change name to new name or leave as default
+            new_name = product + "output.csv" #Change name to new name or leave as default
             new_path = os.path.join(folder_path, new_name)
             os.rename(old_path, new_path)
         elif file== "Link_Output.csv":
-            new_name = "Link_Output.csv" #Change name to new nameor leave as default
+            new_name = product + "Link_Output.csv" #Change name to new nameor leave as default
             new_path = os.path.join(folder_path, new_name)
             os.rename(old_path, new_path)
 
@@ -92,6 +92,7 @@ def renamer(product): #Updates names (For now doesn't change anything)
     root.update_idletasks()
 
 def fileautomation(product):
+    mcheck = 1
     log_text.delete(1.0, tk.END)  # Clear previous log
     try:
         namer()
@@ -103,22 +104,36 @@ def fileautomation(product):
                 i = i + 1;
         except:
             pass
-        delete_csv_files() #Delets all csv files
+        # if(var1.get() == 1 & mcheck == 1):
+            #delete_csv_files() #Delets all csv files
         linkgen() #Generates link to JGI pages for each data set with wanted product
         renamer(product)
         log_text.insert(tk.END, "Process completed successfully!\n")
     except Exception as e:
+        messagebox.showinfo(tk.END, f"Error: {e}\n")
         log_text.insert(tk.END, f"Error: {e}\n")
     root.update_idletasks()
 
 def get_product_parameter(): #For UI and getting product name
     root = tk.Tk()
     root.withdraw()  # Hide the main window
-
     product = simpledialog.askstring("Product Parameter", "Enter the product parameter:")
     if product:
         fileautomation(product)
-        messagebox.showinfo("File Automation", "Process completed successfully!")
+    
+    else:
+        messagebox.showwarning("File Automation", "Product parameter not provided!")
+
+def get_multi_product_parameter(): #For UI and getting product name
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+    product = (simpledialog.askstring("Product Parameter seperated by commas", "Enter the product parameter:")).split(",")
+    mcheck = 0
+    if product:
+        for item in product:
+            fileautomation(item)
+        if(var1.get() == 1):
+            delete_csv_files()
     else:
         messagebox.showwarning("File Automation", "Product parameter not provided!")
 
@@ -132,7 +147,13 @@ if __name__ == "__main__": #UI
     log_text = tk.Text(frame, height=10, width=50)
     log_text.pack(side=tk.TOP, padx=5, pady=5)
 
-    button = tk.Button(frame, text="Enter Product Parameter", command=get_product_parameter)
-    button.pack(side=tk.BOTTOM, padx=5, pady=5)
+    button1 = tk.Button(frame, text="Enter Single Product Parameter", command=get_product_parameter)
+    button1.pack(side=tk.BOTTOM, padx=5, pady=5)
+
+    button2 = tk.Button(frame, text="Enter Multiple Product Parameters", command=get_multi_product_parameter)
+    button2.pack(side=tk.BOTTOM, padx=5, pady=5)
+
+    button3 = tk.Button(frame, text="delete csv files", command=delete_csv_files)
+    button3.pack(side=tk.BOTTOM, padx=5, pady=5)
 
     root.mainloop()
