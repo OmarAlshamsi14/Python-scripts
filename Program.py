@@ -4,9 +4,9 @@ from tkinter import messagebox
 import os
 import csv
 
-def namer(): #Gives every rnaseq data file a number to later start filtering.
+def enum(): #Gives every rnaseq data file a number to later start filtering.
     folder_path = os.path.dirname(os.path.realpath(__file__))
-    log_text.insert(tk.END, "Renaming files...\n")
+    log_text.insert(tk.END, "Enumerating files...\n")
     root.update_idletasks()
 
     # Get a list of all CSV files in the folder
@@ -95,7 +95,7 @@ def fileautomation(product):
     mcheck = 1
     log_text.delete(1.0, tk.END)  # Clear previous log
     try:
-        namer()
+        enum()
         try:
             i = 1;
             while(True):
