@@ -1,15 +1,18 @@
-import tkinter as tk 
-from tkinter import simpledialog
-from tkinter import messagebox
+import tkinter as tk
+from tkinter import simpledialog, messagebox
 import os
 import csv
+import concurrent.futures # a high-level interface for asynchronously executing callables
+from Bio import Entrez, SeqIO
 
-def enum(): #Gives every rnaseq data file a number to later start filtering.
+# Update your Entrez email
+Entrez.email = "YourEmail@example.com"  # Change it to your email address
+
+def namer(): # Gives every rnaseq data file a number to later start filtering.
     folder_path = os.path.dirname(os.path.realpath(__file__))
-    log_text.insert(tk.END, "Enumerating files...\n")
+    log_text.insert(tk.END, "Renaming files...\n")
     root.update_idletasks()
 
-    # Get a list of all CSV files in the folder
     csv_files = [file for file in os.listdir(folder_path) if file.startswith('rnaseq_data')]
 
     # Rename each file with a numbered format
@@ -38,28 +41,42 @@ def filter_and_append_to_csv(input_file, output_file, product):
                 # Write the matching row to the output CSV file
                 csv_writer.writerow(row)
 
-def linkgen():
-    filename = "output_file.csv"
-    f = open(filename, "r")
-    header = f.readline().strip().split() #Header to ignore
-    lines = f.readlines() #Get all lines (Besides header)
-    f.close()
+# The function uses the Entrez module to fetch amino acid sequences from the protein database
+def fetch_amino_acid_sequence(gene_id):
+    handle = Entrez.efetch(db="protein", id=gene_id, rettype="gb", retmode="text")
+    record = SeqIO.read(handle, "genbank")  # Reading the sequence
+    handle.close()
+    return gene_id, str(record.seq)  # Returns a tuple with the gene_id and the amino acid sequence
 
-    with open("Link_Output.csv", "a", newline='') as o:
-        csv_writer = csv.writer(o)
-        csv_writer.writerow(["Gene seq length", "Link to JGI page"])
-        for line in lines:
-            line = line.strip().split()
-            link = "https://img.jgi.doe.gov/cgi-bin/mer/main.cgi?section=MetaGeneDetail&page=genePageMainFaa&taxon_oid=" + line[0] + "&data_type=assembled&gene_oid=" + line[2].split(",")[0]
-            try:
-                if type(int(line[9])) != int:
-                    continue
-                else:
-                    mlist = [line[9], link]
-                csv_writer.writerow(mlist)
-            except:
-                continue
-    log_text.insert(tk.END, "Done generating links.\n")
+# Retrieve sequences and write them to a fasta file
+def generate_fasta_file():
+    filename = "output_file.csv"
+    if not os.path.exists(filename):
+        log_text.insert(tk.END, f"Error: {filename} does not exist.\n")
+        root.update_idletasks()
+        return
+
+    with open(filename, "r") as f:
+        header = f.readline().strip().split()
+        lines = f.readlines()
+
+    # Extracting the gene ID
+    gene_ids = [line.strip().split()[2].split(",")[0] for line in lines]
+
+    with open("amino_acid_sequences.fasta", "w") as fasta_file:
+        # Uses ThreadPool for parallel processing
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_gene_id = {executor.submit(fetch_amino_acid_sequence, gene_id): gene_id for gene_id in gene_ids}
+            for future in concurrent.futures.as_completed(future_to_gene_id):
+                gene_id = future_to_gene_id[future]
+                try:
+                    _, sequence = future.result()
+                    fasta_file.write(f">{gene_id}\n{sequence}\n")
+                except Exception as e:
+                    log_text.insert(tk.END, f"Error fetching sequence for {gene_id}: {e}\n")
+                    root.update_idletasks()
+
+    log_text.insert(tk.END, "Done generating FASTA file.\n")
     root.update_idletasks()
 
 def delete_csv_files():
@@ -69,8 +86,8 @@ def delete_csv_files():
         os.remove(os.path.join(folder_path, file))
     log_text.insert(tk.END, "CSV files have been deleted.\n")
     root.update_idletasks()
-    
-def renamer(product): #Updates names (For now doesn't change anything)
+
+def renamer(product): # Updates names (For now doesn't change anything)
     folder_path = os.path.dirname(os.path.realpath(__file__))
 
     # Get a list of all CSV files in the folder
@@ -80,11 +97,11 @@ def renamer(product): #Updates names (For now doesn't change anything)
     for index, file in enumerate(csv_files, start=1):
         old_path = os.path.join(folder_path, file)
         if file == "output_file.csv":
-            new_name = product + "output.csv" #Change name to new name or leave as default
+            new_name = product + "output.csv"
             new_path = os.path.join(folder_path, new_name)
             os.rename(old_path, new_path)
-        elif file== "Link_Output.csv":
-            new_name = product + "Link_Output.csv" #Change name to new nameor leave as default
+        elif file == "amino_acid_sequences.fasta":
+            new_name = product + "amino_acid_sequences.fasta"
             new_path = os.path.join(folder_path, new_name)
             os.rename(old_path, new_path)
 
@@ -93,20 +110,18 @@ def renamer(product): #Updates names (For now doesn't change anything)
 
 def fileautomation(product):
     mcheck = 1
-    log_text.delete(1.0, tk.END)  # Clear previous log
+    log_text.delete(1.0, tk.END)
     try:
-        enum()
-        try:
-            i = 1;
-            while(True):
-                input_file_path = str(i) + ".csv"
+        namer()
+        i = 1
+        while True:
+            input_file_path = str(i) + ".csv"
+            try:
                 filter_and_append_to_csv(input_file_path, "output_file.csv", product)
-                i = i + 1;
-        except:
-            pass
-        # if(var1.get() == 1 & mcheck == 1):
-            #delete_csv_files() #Delets all csv files
-        linkgen() #Generates link to JGI pages for each data set with wanted product
+                i += 1
+            except FileNotFoundError:
+                break  # Break the loop if the input file does not exist
+        generate_fasta_file()
         renamer(product)
         log_text.insert(tk.END, "Process completed successfully!\n")
     except Exception as e:
@@ -116,31 +131,30 @@ def fileautomation(product):
 
 def get_product_parameter(): #For UI and getting product name
     root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    root.withdraw() # Hide the main window
     product = simpledialog.askstring("Product Parameter", "Enter the product parameter:")
     if product:
         fileautomation(product)
-    
     else:
         messagebox.showwarning("File Automation", "Product parameter not provided!")
 
 def get_multi_product_parameter(): #For UI and getting product name
     root = tk.Tk()
-    root.withdraw()  # Hide the main window
-    product = (simpledialog.askstring("Product Parameter seperated by commas", "Enter the product parameter:")).split(",")
+    root.withdraw() # Hide the main window
+    product = (simpledialog.askstring("Product Parameter separated by commas", "Enter the product parameter:")).split(",")
     mcheck = 0
     if product:
         for item in product:
             fileautomation(item)
-        if(var1.get() == 1):
+        if var1.get() == 1:
             delete_csv_files()
     else:
         messagebox.showwarning("File Automation", "Product parameter not provided!")
 
-if __name__ == "__main__": #UI
+if __name__ == "__main__":
     root = tk.Tk()
     root.title("File Automation")
-    
+
     frame = tk.Frame(root)
     frame.pack(padx=10, pady=10)
 
