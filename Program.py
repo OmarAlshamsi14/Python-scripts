@@ -62,6 +62,36 @@ def linkgen():
     log_text.insert(tk.END, "Done generating links.\n")
     root.update_idletasks()
 
+
+def sequenceGen():
+    filename = "output_file.csv"
+    f = open(filename, "r")
+    header = f.readline().strip().split() #Header to ignore
+    lines = f.readlines() #Get all lines (Besides header)
+    f.close()
+
+   
+
+    o = open("Sequence_Output.csv", "a", newline='')
+    csv_writer = csv.writer(o)
+    csv_writer.writerow(["Gene seq length", "Amino Acid Sequence"])
+    for line in lines:
+        line = line.strip().split()
+        aminoSequence = line[0] + line[2].split(",")[0] + "yayforNow"
+        try:
+            if type(int(line[9])) != int:
+               continue
+            else:
+                mlist = [line[9], aminoSequence]
+                csv_writer.writerow(mlist)
+        except:
+            continue
+    
+            # taxon id = line[0] +geneid =  line[2].split(",")[0]
+            #record.format("fasta")
+          
+    log_text.insert(tk.END, "Done generating sequeneces\n")
+
 def delete_csv_files():
     folder_path = os.path.dirname(os.path.realpath(__file__))
     csv_files = [file for file in os.listdir(folder_path) if 'rnaseq_data' in file]
