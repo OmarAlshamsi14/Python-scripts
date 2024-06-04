@@ -3,6 +3,8 @@ from tkinter import simpledialog
 from tkinter import messagebox
 import os
 import csv
+from Bio import Entrez 
+from Bio import SeqIO
 
 def enum(): #Gives every rnaseq data file a number to later start filtering.
     folder_path = os.path.dirname(os.path.realpath(__file__))
