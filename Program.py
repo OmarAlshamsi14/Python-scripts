@@ -3,8 +3,11 @@ from tkinter import simpledialog
 from tkinter import messagebox
 import os
 import csv
+import concurrent.futures # for asynchronously executing
 from Bio import Entrez 
 from Bio import SeqIO
+
+Entrez.email = "YourEmail@example.com"  # Change it to your email address
 
 def enum(): #Gives every rnaseq data file a number to later start filtering.
     folder_path = os.path.dirname(os.path.realpath(__file__))
@@ -65,14 +68,50 @@ def linkgen():
     root.update_idletasks()
 
 
+# The function uses the Entrez module to fetch amino acid sequences from the protein database
+def fetch_amino_acid_sequence(gene_id):
+    handle = Entrez.efetch(db="protein", id=gene_id, rettype="gb", retmode="text")
+    record = SeqIO.read(handle, "genbank")  # Reading the sequence
+    handle.close()
+    return gene_id, str(record.seq)  # Returns a tuple with the gene_id and the amino acid sequence
+
+# gets sequences and write them to a fasta file
+def generate_fasta_file():
+    filename = "output_file.csv"
+    if not os.path.exists(filename):
+        log_text.insert(tk.END, f"Error: {filename} does not exist.\n")
+        root.update_idletasks()
+        return
+
+    with open(filename, "r") as f:
+        header = f.readline().strip().split()
+        lines = f.readlines()
+
+    # Extracting the gene ID
+    gene_ids = [line.strip().split()[2].split(",")[0] for line in lines]
+
+    with open("amino_acid_sequences.fasta", "w") as fasta_file:
+        # Uses ThreadPool for parallel processing
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_gene_id = {executor.submit(fetch_amino_acid_sequence, gene_id): gene_id for gene_id in gene_ids}
+            for future in concurrent.futures.as_completed(future_to_gene_id):
+                gene_id = future_to_gene_id[future]
+                try:
+                    _, sequence = future.result()
+                    fasta_file.write(f">{gene_id}\n{sequence}\n")
+                except Exception as e:
+                    log_text.insert(tk.END, f"Error fetching sequence for {gene_id}: {e}\n")
+                    root.update_idletasks()
+
+    log_text.insert(tk.END, "Done generating FASTA file.\n")
+    root.update_idletasks()
+
 def sequenceGen():
     filename = "output_file.csv"
     f = open(filename, "r")
     header = f.readline().strip().split() #Header to ignore
     lines = f.readlines() #Get all lines (Besides header)
     f.close()
-
-   
 
     o = open("Sequence_Output.csv", "a", newline='')
     csv_writer = csv.writer(o)
