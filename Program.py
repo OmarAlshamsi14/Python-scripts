@@ -135,11 +135,16 @@ def sequenceGen():
 
 def delete_csv_files():
     folder_path = os.path.dirname(os.path.realpath(__file__))
-    csv_files = [file for file in os.listdir(folder_path) if 'rnaseq_data' in file]
+    csv_files = [file for file in os.listdir(folder_path) if has_numbers(file)]
     for file in csv_files:
         os.remove(os.path.join(folder_path, file))
+        
     log_text.insert(tk.END, "CSV files have been deleted.\n")
     root.update_idletasks()
+
+
+def has_numbers(inputString):
+    return any(char.isdigit() for char in inputString)
     
 def renamer(product): #Updates names (For now doesn't change anything)
     folder_path = os.path.dirname(os.path.realpath(__file__))
@@ -198,13 +203,18 @@ def get_product_parameter(): #For UI and getting product name
 def get_multi_product_parameter(): #For UI and getting product name
     root = tk.Tk()
     root.withdraw()  # Hide the main window
-    product = (simpledialog.askstring("Product Parameter seperated by commas", "Enter the product parameter:")).split(",")
+    product = (simpledialog.askstring("Product Parameter seperated by commas", "Enter the product parameter:"))
+    if product is None:
+         messagebox.showwarning("File Automation", "Product parameter not provided!")
+    else:
+        product = product.split(",")
+    
     mcheck = 0
     if product:
         for item in product:
             fileautomation(item)
-        if(var1.get() == 1):
-            delete_csv_files()
+       
+        delete_csv_files()
     else:
         messagebox.showwarning("File Automation", "Product parameter not provided!")
 
